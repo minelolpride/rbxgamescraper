@@ -25,6 +25,7 @@ def Clear(clear_vars):
     global last_response_code, target_id
     global result_ids, result_uids, result_names
     global gresult_ids, gresult_uids, gresult_names
+
     if clear_vars:
         target_id = 0
         result_ids.clear()
@@ -34,6 +35,7 @@ def Clear(clear_vars):
         gresult_uids.clear()
         gresult_names.clear()
         last_response_code = 0
+
     os.system("cls" if os.name in ("nt", "dos") else "clear")
 
 def Request(url): 
@@ -49,6 +51,7 @@ def OpenResult(ids):
 
 def SaveResult():
     global target_type, target_id, result_ids, result_uids, result_names
+
     match target_type:
         case "users":
             target_info = Request("https://users.roblox.com/v1/users/"+str(target_id))
@@ -56,6 +59,7 @@ def SaveResult():
         case "groups":
             target_info = Request("https://groups.roblox.com/v1/groups/"+str(target_id))
             target_name = "GROUP-"+str(target_info["id"])+" ("+str(target_info["name"])+").txt"
+
     target_file = open(target_name, "w", encoding='utf-8-sig')
     for x in range(len(result_ids)): target_file.write(result_names[x]+" | UID:"+str(result_uids[x])+" | https://roblox.com/games/"+str(result_ids[x])+"\n")
     target_file.close()
@@ -63,16 +67,13 @@ def SaveResult():
 def DisplayResult():
     global result_ids, result_uids, result_names
     Clear(False)
+
     for x in range(len(result_ids)): print("["+str(x)+"] | "+result_names[x]+" | UID:"+str(result_uids[x])+" | https://roblox.com/games/"+str(result_ids[x]))
     usel = input("\nWhat to do? [ (C)ontinue, (S)ave, Open (A)ll, Open (#) ]: ")
     match usel.lower():
         case 'c': return
-        case 's':
-            SaveResult()
-            return
-        case 'a': 
-            OpenResult(result_ids)
-            DisplayResult()
+        case 's': SaveResult(); return
+        case 'a': OpenResult(result_ids); DisplayResult()
     
     try: OpenResult(result_ids[int(usel)]) if int(usel) < len(result_ids) and int(usel) >= 0 else DoNothing()
     except ValueError: pass
@@ -80,8 +81,10 @@ def DisplayResult():
 
 def ScrapeUsersGroups(access, cursor):
     global target_type, target_id, result_ids, result_uids, result_names
+
     if cursor == None: rd = Request("https://games.roblox.com/v2/"+target_type+"/"+str(target_id)+"/games?sortOrder=Asc&accessFilter="+access+"&limit=50")
     else: rd = Request("https://games.roblox.com/v2/"+target_type+"/"+str(target_id)+"/games?sortOrder=Asc&accessFilter="+access+"&limit=50&cursor="+cursor)
+
     if "data" in rd:
         for x in range(len(rd["data"])):
             result_ids.append(rd["data"][x]["rootPlace"]["id"])
@@ -92,27 +95,32 @@ def ScrapeUsersGroups(access, cursor):
         if echo_last_response_info: print("ScrapeUsersGroups(): STATUS ", last_response_code, rd)
         match str(last_response_code):
             case "501": return ScrapeUsersGroups("Public", cursor)
+
     return True
 
 def ScrapeGroupUsers_ScrapeUser(uid, access, cursor, gid, gname):
     global last_response_code, gresult_ids, gresult_uids, gresult_names
-    dont_write_empty_users_to_file = True
+    dont_write_empty_users_to_file = True # no reason to disable it but i'll leave that to you
+
     if cursor == None: rd = Request("https://games.roblox.com/v2/users/"+str(uid)+"/games?sortOrder=Asc&accessFilter="+access+"&limit=50")
     else: rd = Request("https://games.roblox.com/v2/users/"+str(uid)+"/games?sortOrder=Asc&accessFilter="+access+"&limit=50&cursor="+cursor)
+
     if "data" in rd:
         for x in range(len(rd["data"])):
             gresult_ids.append(rd["data"][x]["rootPlace"]["id"])
             gresult_uids.append(rd["data"][x]["id"])
             gresult_names.append(rd["data"][x]["name"])
         if rd.get("nextPageCursor") != None: return ScrapeGroupUsers_ScrapeUser(uid, access, str(rd["nextPageCursor"]))
-        if dont_write_empty_users_to_file:
-            if len(gresult_ids) == 0: return False
+
+        if dont_write_empty_users_to_file and len(gresult_ids) == 0: return False
+
         group_folder_name = "GROUP-"+str(gid)+" ("+gname+")"
         target_info = Request("https://users.roblox.com/v1/users/"+str(uid))
+
         try: os.mkdir(group_folder_name)
         except FileExistsError: pass
-        output_filename = os.path.join(os.path.dirname(__file__), group_folder_name, "USER-"+str(target_info["id"])+" ("+str(target_info["name"])+").txt")
-        output_file = open(output_filename, "w", encoding='utf-8-sig')
+
+        output_file = open(os.path.join(os.path.dirname(__file__), group_folder_name, "USER-"+str(target_info["id"])+" ("+str(target_info["name"])+").txt"), "w", encoding='utf-8-sig')
         for x in range(len(gresult_ids)): output_file.write(gresult_names[x]+" | UID:"+str(gresult_uids[x])+" | https://roblox.com/games/"+str(gresult_ids[x])+"\n")
         output_file.close()
     else:
@@ -124,9 +132,11 @@ def ScrapeGroupUsers_ScrapeUser(uid, access, cursor, gid, gname):
 def ScrapeGroupUsers_GetUsers(g_id, r_id, cursor):
     global last_response_code
     userlist = []
+
     if r_id == "ALL":
         if cursor == None: rd = Request("https://groups.roblox.com/v1/groups/"+str(g_id)+"/users?limit=100&sortOrder=Asc")
         else: rd = Request("https://groups.roblox.com/v1/groups/"+str(g_id)+"/users?limit=100&sortOrder=Asc&cursor="+cursor)
+
         if "data" in rd:
             for x in range(len(rd["data"])): userlist.append(rd["data"][x]["user"]["userId"])
             if rd.get("nextPageCursor") != None: ScrapeGroupUsers_GetUsers(g_id, r_id, str(rd["nextPageCursor"]))
@@ -136,6 +146,7 @@ def ScrapeGroupUsers_GetUsers(g_id, r_id, cursor):
     else:
         if cursor == None: rd = Request("https://groups.roblox.com/v1/groups/"+str(g_id)+"/roles/"+str(r_id)+"/users?limit=100&sortOrder=Asc")
         else: rd = Request("https://groups.roblox.com/v1/groups/"+str(g_id)+"/roles/"+str(r_id)+"/users?limit=100&sortOrder=Asc&cursor="+cursor)
+
         if "data" in rd:
             for x in range(len(rd["data"])): userlist.append(rd["data"][x]["userId"])
             if rd.get("nextPageCursor") != None: ScrapeGroupUsers_GetUsers(g_id, r_id, str(rd["nextPageCursor"]))
@@ -145,14 +156,18 @@ def ScrapeGroupUsers_GetUsers(g_id, r_id, cursor):
     
 def ScrapeGroupUsers_DisplayRanks(g_name, g_ucount, r_names, r_ucounts):
     Clear(False)
+
     print("group "+g_name+" has "+str(g_ucount)+" users in "+str(len(r_names))+" ranks")
     for x in range(len(r_names)): print("["+str(x)+"] | "+r_names[x]+" ("+str(r_ucounts[x])+" users)")
     usel = input("\nSelect a rank [ (#), (A)ll, (C)ancel ]: ")
+
     match usel.lower():
         case "a": return "ALL_USERS"
         case "c": return False
+
     try: return int(usel) if int(usel) < len(r_names) and int(usel) >= 0 else ScrapeGroupUsers_DisplayRanks(g_name, g_ucount, r_names, r_ucounts)
     except ValueError: pass
+
     return ScrapeGroupUsers_DisplayRanks(g_name, g_ucount, r_names, r_ucounts)
 
 def ScrapeGroupUsers():
@@ -164,6 +179,7 @@ def ScrapeGroupUsers():
     group_rank_ids = []
     group_rank_names = []
     group_rank_ucount = []
+
     for x in range(len(group_ranks["roles"])):
         group_rank_ids.append(group_ranks["roles"][x]["id"])
         group_rank_names.append(group_ranks["roles"][x]["name"])
@@ -172,6 +188,7 @@ def ScrapeGroupUsers():
     group_rank_to_scrape = ScrapeGroupUsers_DisplayRanks(group_name, group_ucount, group_rank_names, group_rank_ucount)
     if group_rank_to_scrape == "ALL_USERS": group_target_ids = ScrapeGroupUsers_GetUsers(target_id, "ALL", None)
     else: group_target_ids = ScrapeGroupUsers_GetUsers(target_id, group_rank_ids[group_rank_to_scrape], None)
+
     try:
         for x in range(len(group_target_ids)):
             gresult_ids.clear()
@@ -185,17 +202,18 @@ def ScrapeGroupUsers():
 
 def RunInput(uin):
     global target_type, target_id
+
     match uin:
         case 'u': target_type = "users"
         case 'g': target_type = "groups"
         case 'z': target_type = "groupusers"
         case 'q': exit()
+
     try: target_id = int(uin)
     except ValueError: return False
-    if target_type == "groupusers":
-        return ScrapeGroupUsers()
-    else:
-        return ScrapeUsersGroups("All", None)
+
+    if target_type == "groupusers": return ScrapeGroupUsers()
+    else: return ScrapeUsersGroups("All", None)
 
 if __name__=="__main__":
     while True:
