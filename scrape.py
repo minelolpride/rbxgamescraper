@@ -1,6 +1,5 @@
 import sys
 import os
-from typing import Type
 import requests
 import json
 import webbrowser
@@ -34,6 +33,37 @@ def OpenResult(ids):
         for x in range(len(ids)): webbrowser.open("https://roblox.com/games/"+str(ids[x]), new=0)
     except TypeError: webbrowser.open("https://roblox.com/games/"+str(ids), new=0)
 
+def SaveResult():
+    global target_type, target_id, result_ids, result_names
+    match target_type:
+        case "users":
+            target_info = Request("https://users.roblox.com/v1/users/"+str(target_id))
+            target_name = "USER-"+str(target_info["id"])+" ("+str(target_info["name"])+").txt"
+        case "groups":
+            target_info = Request("https://groups.roblox.com/v1/groups/"+str(target_id))
+            target_name = "GROUP-"+str(target_info["id"])+" ("+str(target_info["name"])+").txt"
+    target_file = open(target_name, "w", encoding='utf-8-sig')
+    for x in range(len(result_ids)): target_file.write(result_names[x]+" :: https://roblox.com/games/"+str(result_ids[x])+"\n")
+    target_file.close()
+
+def DisplayResult():
+    global result_ids, result_names
+    Clear(False)
+    for x in range(len(result_ids)): print("["+str(x)+"] :: "+result_names[x]+" :: https://roblox.com/games/"+str(result_ids[x]))
+    usel = input("\nWhat to do? [ (C)ontinue, (S)ave, Open (A)ll, Open (#) ]: ")
+    match usel.lower():
+        case 'c': return
+        case 's':
+            SaveResult()
+            return
+        case 'a': 
+            OpenResult(result_ids)
+            DisplayResult()
+    
+    try: OpenResult(result_ids[int(usel)])
+    except ValueError: pass
+    DisplayResult()
+
 def ScrapeUsersGroups(access, cursor):
     global target_type, target_id, result_ids, result_names
     if cursor == None: rd = Request("https://games.roblox.com/v2/"+target_type+"/"+str(target_id)+"/games?sortOrder=Asc&accessFilter="+access+"&limit=50")
@@ -51,21 +81,6 @@ def ScrapeUsersGroups(access, cursor):
     if "nextPageCursor" in rd:
         if rd["nextPageCursor"] != None: return ScrapeUsersGroups(access, str(rd["nextPageCursor"]))
     return True
-
-def DisplayResult():
-    global result_ids, result_names
-    Clear(False)
-    for x in range(len(result_ids)): print("["+str(x)+"] :: "+result_names[x]+" :: https://roblox.com/games/"+str(result_ids[x]))
-    usel = input("\nWhat to do? [ (C)ontinue, Open (A)ll, Open (#) ]: ")
-    match usel.lower():
-        case 'c': return
-        case 'a': 
-            OpenResult(result_ids)
-            DisplayResult()
-    
-    try: OpenResult(result_ids[int(usel)])
-    except ValueError: pass
-    DisplayResult()
 
 def RunInput(uin):
     global target_type, target_id
