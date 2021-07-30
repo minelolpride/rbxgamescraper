@@ -1,7 +1,9 @@
 import sys
 import os
+from typing import Type
 import requests
 import json
+import webbrowser
 
 target_type = "users" # users, groups
 target_id = 0
@@ -27,6 +29,11 @@ def Request(url):
     last_response_code = data_raw.status_code
     return json.loads(data_raw.content.decode('utf-8-sig'))
 
+def OpenResult(ids):
+    try: 
+        for x in range(len(ids)): webbrowser.open("https://roblox.com/games/"+str(ids[x]), new=0)
+    except TypeError: webbrowser.open("https://roblox.com/games/"+str(ids), new=0)
+
 def ScrapeUsersGroups(access, cursor):
     global target_type, target_id, result_ids, result_names
     if cursor == None: rd = Request("https://games.roblox.com/v2/"+target_type+"/"+str(target_id)+"/games?sortOrder=Asc&accessFilter="+access+"&limit=50")
@@ -47,8 +54,18 @@ def ScrapeUsersGroups(access, cursor):
 
 def DisplayResult():
     global result_ids, result_names
-    for x in range(len(result_ids)): print(result_names[x]+" :: https://roblox.com/games/"+str(result_ids[x]))
-    input("\nPress ENTER to continue")
+    Clear(False)
+    for x in range(len(result_ids)): print("["+str(x)+"] :: "+result_names[x]+" :: https://roblox.com/games/"+str(result_ids[x]))
+    usel = input("\nWhat to do? [ (C)ontinue, Open (A)ll, Open (#) ]: ")
+    match usel.lower():
+        case 'c': return
+        case 'a': 
+            OpenResult(result_ids)
+            DisplayResult()
+    
+    try: OpenResult(result_ids[int(usel)])
+    except ValueError: pass
+    DisplayResult()
 
 def RunInput(uin):
     global target_type, target_id
