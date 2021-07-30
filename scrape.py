@@ -92,7 +92,6 @@ def ScrapeUsersGroups(access, cursor):
         if echo_last_response_info: print("ScrapeUsersGroups(): STATUS ", last_response_code, rd)
         match str(last_response_code):
             case "501": return ScrapeUsersGroups("Public", cursor)
-    
     return True
 
 def ScrapeGroupUsers_ScrapeUser(uid, access, cursor, gid, gname):
