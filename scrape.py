@@ -74,7 +74,7 @@ def DisplayResult():
             OpenResult(result_ids)
             DisplayResult()
     
-    try: OpenResult(result_ids[int(usel)]) if int(usel) < len(result_ids) else DoNothing()
+    try: OpenResult(result_ids[int(usel)]) if int(usel) < len(result_ids) and int(usel) >= 0 else DoNothing()
     except ValueError: pass
     DisplayResult()
 
@@ -152,7 +152,7 @@ def ScrapeGroupUsers_DisplayRanks(g_name, g_ucount, r_names, r_ucounts):
     match usel.lower():
         case "a": return "ALL_USERS"
         case "c": return False
-    try: return int(usel) if int(usel) < len(r_names) else ScrapeGroupUsers_DisplayRanks(g_name, g_ucount, r_names, r_ucounts)
+    try: return int(usel) if int(usel) < len(r_names) and int(usel) >= 0 else ScrapeGroupUsers_DisplayRanks(g_name, g_ucount, r_names, r_ucounts)
     except ValueError: pass
     return ScrapeGroupUsers_DisplayRanks(g_name, g_ucount, r_names, r_ucounts)
 
