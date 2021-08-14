@@ -109,7 +109,7 @@ def DisplayResult():
     match usel.lower():
         case 'c': return
         case 's': SaveResult(); return
-        case 'a': OpenResult(result_ids); DisplayResult()
+        case 'a': OpenResult(result_ids)
     
     try: OpenResult(result_ids[int(usel)]) if int(usel) < len(result_ids) and int(usel) >= 0 else DoNothing()
     except ValueError: pass
