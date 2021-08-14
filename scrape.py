@@ -75,7 +75,7 @@ def OpenResult(ids):
 
 def SaveResult():
     global target_type, target_id, result_ids, result_uids, result_names, loaded_ids, loaded_uids, loaded_names
-
+    print("Saving places...")
     match target_type:
         case "users":
             target_info = Request("https://users.roblox.com/v1/users/"+str(target_id))
@@ -126,12 +126,13 @@ def ScrapeUsersGroups(access, cursor):
             result_ids.append(rd["data"][x]["rootPlace"]["id"])
             result_uids.append(rd["data"][x]["id"])
             result_names.append(rd["data"][x]["name"])
+            print("\rPlaces: "+str(len(result_ids)), end="")
         if rd.get("nextPageCursor") != None: return ScrapeUsersGroups(access, str(rd["nextPageCursor"]))
+        else: print()
     else:
         if echo_last_response_info: print("ScrapeUsersGroups(): STATUS ", last_response_code, rd)
         match str(last_response_code):
             case "501": return ScrapeUsersGroups("Public", cursor)
-
     return True
 
 def ScrapeGroupUsers_ScrapeUser(uid, access, cursor, gid, gname):
@@ -243,6 +244,7 @@ def ScrapeGroupUsers():
             gresult_ids.clear()
             gresult_uids.clear()
             gresult_names.clear()
+            print("\r"+str(x+1)+" / "+str(len(group_target_ids)), end="")
             ScrapeGroupUsers_ScrapeUser(group_target_ids[x], "All", None, target_id, group_name)
     except TypeError: ScrapeGroupUsers_ScrapeUser(group_target_ids, "All", None, target_id, group_name)
 
