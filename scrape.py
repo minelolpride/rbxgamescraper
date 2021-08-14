@@ -1,5 +1,6 @@
 import sys
 import os
+import glob
 import requests
 import json
 import webbrowser
@@ -15,6 +16,10 @@ gresult_names = []
 last_response_code = 0
 echo_last_response_info = False
 
+loaded_ids = []
+loaded_uids = []
+loaded_names = []
+
 
 if sys.version_info < (3, 10):
 	raise Exception("py version not at least 3.10!")
@@ -25,6 +30,7 @@ def Clear(clear_vars):
     global last_response_code, target_id
     global result_ids, result_uids, result_names
     global gresult_ids, gresult_uids, gresult_names
+    global loaded_ids, loaded_uids, loaded_names
 
     if clear_vars:
         target_id = 0
@@ -34,9 +40,24 @@ def Clear(clear_vars):
         gresult_ids.clear()
         gresult_uids.clear()
         gresult_names.clear()
+        loaded_ids.clear()
+        loaded_uids.clear()
+        loaded_names.clear()
         last_response_code = 0
 
     os.system("cls" if os.name in ("nt", "dos") else "clear")
+
+def LoadCurrentStoredData(filep):
+    global target_type, target_id, loaded_ids, loaded_uids, loaded_names
+    try: utx = open(filep, "r", encoding="utf-8-sig")
+    except OSError: return False # probably no file
+    udat = utx.read()
+    lines = udat.splitlines()
+    for l in range(len(lines)): 
+        f = lines[l].split(" | ")
+        loaded_names.append(f[0]) # name
+        loaded_uids.append(f[1][4:]) # uid
+        loaded_ids.append(f[2][25:]) # pid
 
 def Request(url): 
     global last_response_code
@@ -50,7 +71,7 @@ def OpenResult(ids):
     except TypeError: webbrowser.open("https://roblox.com/games/"+str(ids), new=0)
 
 def SaveResult():
-    global target_type, target_id, result_ids, result_uids, result_names
+    global target_type, target_id, result_ids, result_uids, result_names, loaded_ids, loaded_uids, loaded_names
 
     match target_type:
         case "users":
@@ -59,6 +80,8 @@ def SaveResult():
         case "groups":
             target_info = Request("https://groups.roblox.com/v1/groups/"+str(target_id))
             target_name = "GROUP-"+str(target_info["id"])+" ("+str(target_info["name"])+").txt"
+    
+    LoadCurrentStoredData(target_name)
 
     target_file = open(target_name, "w", encoding='utf-8-sig')
     for x in range(len(result_ids)): target_file.write(result_names[x]+" | UID:"+str(result_uids[x])+" | https://roblox.com/games/"+str(result_ids[x])+"\n")
@@ -99,7 +122,7 @@ def ScrapeUsersGroups(access, cursor):
     return True
 
 def ScrapeGroupUsers_ScrapeUser(uid, access, cursor, gid, gname):
-    global last_response_code, gresult_ids, gresult_uids, gresult_names
+    global last_response_code, gresult_ids, gresult_uids, gresult_names, loaded_ids, loaded_uids, loaded_names
     dont_write_empty_users_to_file = True # no reason to disable it but i'll leave that to you
 
     if cursor == None: rd = Request("https://games.roblox.com/v2/users/"+str(uid)+"/games?sortOrder=Asc&accessFilter="+access+"&limit=50")
@@ -119,15 +142,17 @@ def ScrapeGroupUsers_ScrapeUser(uid, access, cursor, gid, gname):
 
         try: os.mkdir(group_folder_name)
         except FileExistsError: pass
+        out_name = os.path.join(os.path.dirname(__file__), group_folder_name, "USER-"+str(target_info["id"])+" ("+str(target_info["name"])+").txt")
+        output_file = open(out_name, "w", encoding='utf-8-sig')
 
-        output_file = open(os.path.join(os.path.dirname(__file__), group_folder_name, "USER-"+str(target_info["id"])+" ("+str(target_info["name"])+").txt"), "w", encoding='utf-8-sig')
+        LoadCurrentStoredData(out_name)
+
         for x in range(len(gresult_ids)): output_file.write(gresult_names[x]+" | UID:"+str(gresult_uids[x])+" | https://roblox.com/games/"+str(gresult_ids[x])+"\n")
         output_file.close()
     else:
         if echo_last_response_info: print("ScrapeGroupUsers_ScrapeUser(): STATUS", last_response_code, rd)
         match str(last_response_code):
             case "501": return ScrapeGroupUsers_ScrapeUser(uid, "Public", cursor, gid, gname)
-        
 
 def ScrapeGroupUsers_GetUsers(g_id, r_id, cursor):
     global last_response_code
@@ -187,7 +212,8 @@ def ScrapeGroupUsers():
 
     group_rank_to_scrape = ScrapeGroupUsers_DisplayRanks(group_name, group_ucount, group_rank_names, group_rank_ucount)
     if group_rank_to_scrape == "ALL_USERS": group_target_ids = ScrapeGroupUsers_GetUsers(target_id, "ALL", None)
-    else: group_target_ids = ScrapeGroupUsers_GetUsers(target_id, group_rank_ids[group_rank_to_scrape], None)
+    elif group_rank_to_scrape: group_target_ids = ScrapeGroupUsers_GetUsers(target_id, group_rank_ids[group_rank_to_scrape], None)
+    else: return False
 
     try:
         for x in range(len(group_target_ids)):
