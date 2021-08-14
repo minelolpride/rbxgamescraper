@@ -84,7 +84,17 @@ def SaveResult():
     LoadCurrentStoredData(target_name)
 
     target_file = open(target_name, "w", encoding='utf-8-sig')
-    for x in range(len(result_ids)): target_file.write(result_names[x]+" | UID:"+str(result_uids[x])+" | https://roblox.com/games/"+str(result_ids[x])+"\n")
+    for x in range(len(result_ids)): 
+        if len(loaded_ids) > 0:
+            if str(result_ids[x]) in loaded_ids:
+                del loaded_ids[loaded_ids.index(str(result_ids[x]))]
+                del loaded_names[loaded_names.index(str(result_names[x]))]
+                del loaded_uids[loaded_uids.index(str(result_uids[x]))]
+
+        target_file.write(result_names[x]+" | UID:"+str(result_uids[x])+" | https://roblox.com/games/"+str(result_ids[x])+"\n")
+    if len(loaded_ids) > 0:
+        for x in range(len(loaded_ids)):
+            target_file.write(loaded_names[x]+" | UID:"+str(loaded_uids[x])+" | https://roblox.com/games/"+str(loaded_ids[x])+"\n")
     target_file.close()
 
 def DisplayResult():
