@@ -1,6 +1,5 @@
 import sys
 import os
-import glob
 import requests
 import json
 import webbrowser
@@ -66,7 +65,7 @@ def Request(url):
     global last_response_code
     data_raw = requests.get(url)
     last_response_code = data_raw.status_code
-    return json.loads(data_raw.content.decode('utf-8-sig'))
+    return json.loads(data_raw.content.decode())
 
 def OpenResult(ids):
     try: 
@@ -138,17 +137,18 @@ def ScrapeUsersGroups(access, cursor):
 def ScrapeGroupUsers_ScrapeUser(uid, access, cursor, gid, gname):
     global last_response_code, gresult_ids, gresult_uids, gresult_names, loaded_ids, loaded_uids, loaded_names
     dont_write_empty_users_to_file = True # no reason to disable it but i'll leave that to you
-
+    
     if cursor == None: rd = Request("https://games.roblox.com/v2/users/"+str(uid)+"/games?sortOrder=Asc&accessFilter="+access+"&limit=50")
     else: rd = Request("https://games.roblox.com/v2/users/"+str(uid)+"/games?sortOrder=Asc&accessFilter="+access+"&limit=50&cursor="+cursor)
-
+    
     if "data" in rd:
         for x in range(len(rd["data"])):
             gresult_ids.append(rd["data"][x]["rootPlace"]["id"])
             gresult_uids.append(rd["data"][x]["id"])
             gresult_names.append(rd["data"][x]["name"])
-        if rd.get("nextPageCursor") != None: return ScrapeGroupUsers_ScrapeUser(uid, access, str(rd["nextPageCursor"]))
-
+        
+        if rd.get("nextPageCursor") != None: return ScrapeGroupUsers_ScrapeUser(uid, access, str(rd["nextPageCursor"]), gid, gname)
+        
         if dont_write_empty_users_to_file and len(gresult_ids) == 0: return False
 
         group_folder_name = "GROUP-"+str(gid)+" ("+gname+")"
@@ -157,17 +157,16 @@ def ScrapeGroupUsers_ScrapeUser(uid, access, cursor, gid, gname):
         try: os.mkdir(group_folder_name)
         except FileExistsError: pass
         out_name = os.path.join(os.path.dirname(__file__), group_folder_name, "USER-"+str(target_info["id"])+" ("+str(target_info["name"])+").txt")
-
+        
         LoadCurrentStoredData(out_name)
         output_file = open(out_name, "w", encoding='utf-8-sig')
-
+        
         for x in range(len(gresult_ids)): 
             if len(loaded_ids) > 0:
                 if str(gresult_ids[x]) in loaded_ids:
                     del loaded_ids[loaded_ids.index(str(gresult_ids[x]))]
                     del loaded_names[loaded_names.index(str(gresult_names[x]))]
                     del loaded_uids[loaded_uids.index(str(gresult_uids[x]))]
-
             output_file.write(gresult_names[x]+" | UID:"+str(gresult_uids[x])+" | https://roblox.com/games/"+str(gresult_ids[x])+"\n")
         if len(loaded_ids) > 0:
             for x in range(len(loaded_ids)):
