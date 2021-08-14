@@ -49,6 +49,9 @@ def Clear(clear_vars):
 
 def LoadCurrentStoredData(filep):
     global target_type, target_id, loaded_ids, loaded_uids, loaded_names
+    loaded_ids.clear()
+    loaded_uids.clear()
+    loaded_names.clear()
     try: utx = open(filep, "r", encoding="utf-8-sig")
     except OSError: return False # probably no file
     udat = utx.read()
@@ -153,11 +156,21 @@ def ScrapeGroupUsers_ScrapeUser(uid, access, cursor, gid, gname):
         try: os.mkdir(group_folder_name)
         except FileExistsError: pass
         out_name = os.path.join(os.path.dirname(__file__), group_folder_name, "USER-"+str(target_info["id"])+" ("+str(target_info["name"])+").txt")
-        output_file = open(out_name, "w", encoding='utf-8-sig')
 
         LoadCurrentStoredData(out_name)
+        output_file = open(out_name, "w", encoding='utf-8-sig')
 
-        for x in range(len(gresult_ids)): output_file.write(gresult_names[x]+" | UID:"+str(gresult_uids[x])+" | https://roblox.com/games/"+str(gresult_ids[x])+"\n")
+        for x in range(len(gresult_ids)): 
+            if len(loaded_ids) > 0:
+                if str(gresult_ids[x]) in loaded_ids:
+                    del loaded_ids[loaded_ids.index(str(gresult_ids[x]))]
+                    del loaded_names[loaded_names.index(str(gresult_names[x]))]
+                    del loaded_uids[loaded_uids.index(str(gresult_uids[x]))]
+
+            output_file.write(gresult_names[x]+" | UID:"+str(gresult_uids[x])+" | https://roblox.com/games/"+str(gresult_ids[x])+"\n")
+        if len(loaded_ids) > 0:
+            for x in range(len(loaded_ids)):
+                output_file.write(loaded_names[x]+" | UID:"+str(loaded_uids[x])+" | https://roblox.com/games/"+str(loaded_ids[x])+"\n")
         output_file.close()
     else:
         if echo_last_response_info: print("ScrapeGroupUsers_ScrapeUser(): STATUS", last_response_code, rd)
