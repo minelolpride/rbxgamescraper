@@ -19,6 +19,9 @@ loaded_ids = []
 loaded_uids = []
 loaded_names = []
 
+access_filter_all = "4"
+access_filter_public = "2"
+access_filter_private = "1"
 
 if sys.version_info < (3, 10):
 	raise Exception("py version not at least 3.10!")
@@ -131,7 +134,7 @@ def ScrapeUsersGroups(access, cursor):
     else:
         if echo_last_response_info: print("ScrapeUsersGroups(): STATUS ", last_response_code, rd)
         match str(last_response_code):
-            case "501": return ScrapeUsersGroups("Public", cursor)
+            case "501": return ScrapeUsersGroups(access_filter_public, cursor)
     return True
 
 def ScrapeGroupUsers_ScrapeUser(uid, access, cursor, gid, gname):
@@ -175,7 +178,7 @@ def ScrapeGroupUsers_ScrapeUser(uid, access, cursor, gid, gname):
     else:
         if echo_last_response_info: print("ScrapeGroupUsers_ScrapeUser(): STATUS", last_response_code, rd)
         match str(last_response_code):
-            case "501": return ScrapeGroupUsers_ScrapeUser(uid, "Public", cursor, gid, gname)
+            case "501": return ScrapeGroupUsers_ScrapeUser(uid, access_filter_public, cursor, gid, gname)
 
 def ScrapeGroupUsers_GetUsers(g_id, r_id, cursor):
     global last_response_code
@@ -244,8 +247,8 @@ def ScrapeGroupUsers():
             gresult_uids.clear()
             gresult_names.clear()
             print("\r"+str(x+1)+" / "+str(len(group_target_ids)), end="")
-            ScrapeGroupUsers_ScrapeUser(group_target_ids[x], "All", None, target_id, group_name)
-    except TypeError: ScrapeGroupUsers_ScrapeUser(group_target_ids, "All", None, target_id, group_name)
+            ScrapeGroupUsers_ScrapeUser(group_target_ids[x], access_filter_all, None, target_id, group_name)
+    except TypeError: ScrapeGroupUsers_ScrapeUser(group_target_ids, access_filter_all, None, target_id, group_name)
 
     return False
 
@@ -263,7 +266,7 @@ def RunInput(uin):
     except ValueError: return False
 
     if target_type == "groupusers": return ScrapeGroupUsers()
-    else: return ScrapeUsersGroups("All", None)
+    else: return ScrapeUsersGroups(access_filter_all, None)
 
 if __name__=="__main__":
     while True:
