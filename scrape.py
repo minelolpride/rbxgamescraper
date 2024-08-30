@@ -12,6 +12,7 @@ result_names = []
 gresult_ids = []
 gresult_uids = []
 gresult_names = []
+gusers_ids = []
 last_response_code = 0
 echo_last_response_info = False
 
@@ -181,17 +182,17 @@ def ScrapeGroupUsers_ScrapeUser(uid, access, cursor, gid, gname):
             case "501": return ScrapeGroupUsers_ScrapeUser(uid, access_filter_public, cursor, gid, gname)
 
 def ScrapeGroupUsers_GetUsers(g_id, r_id, cursor):
-    global last_response_code
-    userlist = []
-
+    global last_response_code, gusers_ids
+    if cursor == None: gusers_ids = [] # no cursor = first entry, clean the list and carry on
+    
     if r_id == "ALL":
         if cursor == None: rd = Request("https://groups.roblox.com/v1/groups/"+str(g_id)+"/users?limit=100&sortOrder=Asc")
         else: rd = Request("https://groups.roblox.com/v1/groups/"+str(g_id)+"/users?limit=100&sortOrder=Asc&cursor="+cursor)
 
         if "data" in rd:
-            for x in range(len(rd["data"])): userlist.append(rd["data"][x]["user"]["userId"])
+            for x in range(len(rd["data"])): gusers_ids.append(rd["data"][x]["user"]["userId"])
             if rd.get("nextPageCursor") != None: ScrapeGroupUsers_GetUsers(g_id, r_id, str(rd["nextPageCursor"]))
-            else: return userlist
+            else: return gusers_ids
         else:
             print("STATUS ", last_response_code, rd)
     else:
@@ -199,9 +200,9 @@ def ScrapeGroupUsers_GetUsers(g_id, r_id, cursor):
         else: rd = Request("https://groups.roblox.com/v1/groups/"+str(g_id)+"/roles/"+str(r_id)+"/users?limit=100&sortOrder=Asc&cursor="+cursor)
 
         if "data" in rd:
-            for x in range(len(rd["data"])): userlist.append(rd["data"][x]["userId"])
+            for x in range(len(rd["data"])): gusers_ids.append(rd["data"][x]["userId"])
             if rd.get("nextPageCursor") != None: ScrapeGroupUsers_GetUsers(g_id, r_id, str(rd["nextPageCursor"]))
-            else: return userlist
+            else: return gusers_ids
         else:
             if echo_last_response_info: print("ScrapeGroupUsers_GetUsers(): STATUS", last_response_code, rd)
     
@@ -222,7 +223,7 @@ def ScrapeGroupUsers_DisplayRanks(g_name, g_ucount, r_names, r_ucounts):
     return ScrapeGroupUsers_DisplayRanks(g_name, g_ucount, r_names, r_ucounts)
 
 def ScrapeGroupUsers():
-    global target_id, gresult_ids, gresult_uids, gresult_names
+    global target_id, gresult_ids, gresult_uids, gresult_names, gusers_ids
     group_info = Request("https://groups.roblox.com/v1/groups/"+str(target_id))
     group_name = group_info["name"]
     group_ucount = group_info["memberCount"]
@@ -237,18 +238,18 @@ def ScrapeGroupUsers():
         group_rank_ucount.append(group_ranks["roles"][x]["memberCount"])
 
     group_rank_to_scrape = ScrapeGroupUsers_DisplayRanks(group_name, group_ucount, group_rank_names, group_rank_ucount)
-    if group_rank_to_scrape == "ALL_USERS": group_target_ids = ScrapeGroupUsers_GetUsers(target_id, "ALL", None)
-    elif group_rank_to_scrape: group_target_ids = ScrapeGroupUsers_GetUsers(target_id, group_rank_ids[group_rank_to_scrape], None)
+    if group_rank_to_scrape == "ALL_USERS": ScrapeGroupUsers_GetUsers(target_id, "ALL", None)
+    elif group_rank_to_scrape: ScrapeGroupUsers_GetUsers(target_id, group_rank_ids[group_rank_to_scrape], None)
     else: return False
 
     try:
-        for x in range(len(group_target_ids)):
+        for x in range(len(gusers_ids)):
             gresult_ids.clear()
             gresult_uids.clear()
             gresult_names.clear()
-            print("\r"+str(x+1)+" / "+str(len(group_target_ids)), end="")
-            ScrapeGroupUsers_ScrapeUser(group_target_ids[x], access_filter_all, None, target_id, group_name)
-    except TypeError: ScrapeGroupUsers_ScrapeUser(group_target_ids, access_filter_all, None, target_id, group_name)
+            print("\r"+str(x+1)+" / "+str(len(gusers_ids)), end="")
+            ScrapeGroupUsers_ScrapeUser(gusers_ids[x], access_filter_all, None, target_id, group_name)
+    except TypeError: ScrapeGroupUsers_ScrapeUser(gusers_ids, access_filter_all, None, target_id, group_name)
 
     return False
 
